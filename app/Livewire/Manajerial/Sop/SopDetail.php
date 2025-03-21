@@ -105,66 +105,85 @@ class SopDetail extends Component
         }
     
         public function store()
-    {
-        $this->validate($this->rules());
+        {
+            Log::info('Starting store method');
+            $this->validate($this->rules());
     
-        try {
-            $gambar_url = null;
-            if ($this->gambar) {
-                try {
-                    // Tambah folder dan options
-                    $result = Cloudinary::upload($this->gambar->getRealPath(), [
-                        'folder' => 'sop-images',
-                        'resource_type' => 'auto',
-                        'public_id' => 'sop_' . time() // Unique name
+            try {
+                $gambar_url = null;
+                if ($this->gambar) {
+                    Log::info('File details:', [
+                        'name' => $this->gambar->getClientOriginalName(),
+                        'size' => $this->gambar->getSize(),
+                        'mime' => $this->gambar->getMimeType(),
+                        'temp_path' => $this->gambar->getRealPath()
                     ]);
-                    $gambar_url = $result->getSecurePath();
-                } catch (\Exception $e) {
-                    Log::error('Cloudinary upload failed', [
-                        'error' => $e->getMessage()
-                    ]);
-                    throw $e;
+    
+                    try {
+                        Log::info('Cloudinary config:', [
+                            'cloud_name' => config('cloudinary.cloud_name'),
+                            'api_key' => config('cloudinary.api_key'),
+                            'url' => config('cloudinary.url')
+                        ]);
+    
+                        $result = Cloudinary::upload($this->gambar->getRealPath(), [
+                            'folder' => 'sop-images',
+                            'resource_type' => 'auto',
+                            'public_id' => 'sop_' . time()
+                        ]);
+                        
+                        $gambar_url = $result->getSecurePath();
+                        Log::info('Upload success:', ['url' => $gambar_url]);
+                    } catch (\Exception $e) {
+                        Log::error('Cloudinary upload error:', [
+                            'message' => $e->getMessage(),
+                            'code' => $e->getCode(),
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'trace' => $e->getTraceAsString()
+                        ]);
+                        throw $e;
+                    }
                 }
-            }
     
-            $data = [
-                'judul' => $this->judul,
-                'urutan' => $this->urutan,
-                'deskripsi' => $this->deskripsi,
-                'gambar_url' => $gambar_url // ganti gambar_path jadi gambar_url
-            ];
+                $data = [
+                    'judul' => $this->judul,
+                    'urutan' => $this->urutan,
+                    'deskripsi' => $this->deskripsi,
+                    'gambar_url' => $gambar_url // ganti gambar_path jadi gambar_url
+                ];
     
-            // Add quality parameters if SOP type is quality
-            if ($this->sop->kategori === 'quality') {
-                $data = array_merge($data, [
-                    'needs_standard' => true,
-                    'nilai_standar' => $this->nilai_standar,
-                    'toleransi_min' => $this->toleransi_min,
-                    'toleransi_max' => $this->toleransi_max,
-                    'measurement_type' => $this->measurement_type,
-                    'measurement_unit' => $this->measurement_unit,
-                    'interval_value' => $this->interval_value,
-                    'interval_unit' => $this->interval_unit
+                // Add quality parameters if SOP type is quality
+                if ($this->sop->kategori === 'quality') {
+                    $data = array_merge($data, [
+                        'needs_standard' => true,
+                        'nilai_standar' => $this->nilai_standar,
+                        'toleransi_min' => $this->toleransi_min,
+                        'toleransi_max' => $this->toleransi_max,
+                        'measurement_type' => $this->measurement_type,
+                        'measurement_unit' => $this->measurement_unit,
+                        'interval_value' => $this->interval_value,
+                        'interval_unit' => $this->interval_unit
+                    ]);
+                }
+    
+                $this->sop->steps()->create($data);
+    
+                $this->reset(['judul', 'urutan', 'deskripsi', 'gambar', 
+                             'nilai_standar', 'toleransi_min', 'toleransi_max',
+                             'measurement_type', 'measurement_unit', 
+                             'interval_value', 'interval_unit']);
+                $this->closeModal();
+                session()->flash('success', 'Step berhasil ditambahkan');
+            } catch (\Exception $e) {
+                Log::error('Store method failed', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
+                session()->flash('error', 'Gagal menyimpan data: ' . $e->getMessage());
             }
-    
-            $this->sop->steps()->create($data);
-    
-            $this->reset(['judul', 'urutan', 'deskripsi', 'gambar', 
-                         'nilai_standar', 'toleransi_min', 'toleransi_max',
-                         'measurement_type', 'measurement_unit', 
-                         'interval_value', 'interval_unit']);
-            $this->closeModal();
-            session()->flash('success', 'Step berhasil ditambahkan');
-        } catch (\Exception $e) {
-            Log::error('Store method failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            session()->flash('error', 'Gagal menyimpan data: ' . $e->getMessage());
         }
-    }
-    
+        
         public function openModal()
         {
             $this->reset(['judul', 'deskripsi', 'urutan', 'gambar', 'nilai_standar', 
@@ -201,70 +220,86 @@ class SopDetail extends Component
         }
     
         public function update()
-    {
-        $this->validate($this->rules());
-    
-        try {
-            $step = $this->sop->steps()->find($this->editId);
-            
-            $gambar_url = $step->gambar_url;
-            if ($this->gambar) {
-                Log::info('Starting image update to Cloudinary', [
-                    'original_name' => $this->gambar->getClientOriginalName(),
-                    'size' => $this->gambar->getSize(),
-                    'mime_type' => $this->gambar->getMimeType()
-                ]);
-    
-                try {
-                    $result = Cloudinary::upload($this->gambar->getRealPath());
-                    $gambar_url = $result->getSecurePath();
-                    Log::info('Cloudinary update successful', ['url' => $gambar_url]);
-                } catch (\Exception $e) {
-                    Log::error('Cloudinary update failed', [
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
-                    ]);
-                    throw $e;
-                }
-            }
-    
-            $data = [
-                'judul' => $this->judul,
-                'urutan' => $this->urutan,
-                'deskripsi' => $this->deskripsi,
-                'gambar_url' => $gambar_url // ganti gambar_path jadi gambar_url
-            ];
-    
-            // Add quality parameters if SOP type is quality
-            if ($this->sop->kategori === 'quality') {
-                $data = array_merge($data, [
-                    'needs_standard' => true,
-                    'nilai_standar' => $this->nilai_standar,
-                    'toleransi_min' => $this->toleransi_min,
-                    'toleransi_max' => $this->toleransi_max,
-                    'measurement_type' => $this->measurement_type,
-                    'measurement_unit' => $this->measurement_unit,
-                    'interval_value' => $this->interval_value,
-                    'interval_unit' => $this->interval_unit
-                ]);
-            }
-    
-            $step->update($data);
-    
-            $this->reset(['judul', 'urutan', 'deskripsi', 'gambar', 'editId',
-                         'nilai_standar', 'toleransi_min', 'toleransi_max',
-                         'measurement_type', 'measurement_unit', 
-                         'interval_value', 'interval_unit']);
-            $this->closeModal();
-            session()->flash('success', 'Step berhasil diupdate');
-        } catch (\Exception $e) {
-            Log::error('Update method failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+        {
+            Log::info('Starting update method');
+    $this->validate($this->rules());
+
+    try {
+        $step = $this->sop->steps()->find($this->editId);
+        
+        $gambar_url = $step->gambar_url;
+        if ($this->gambar) {
+            Log::info('Update file details:', [
+                'name' => $this->gambar->getClientOriginalName(),
+                'size' => $this->gambar->getSize(),
+                'mime' => $this->gambar->getMimeType(),
+                'temp_path' => $this->gambar->getRealPath()
             ]);
-            session()->flash('error', 'Gagal mengupdate data: ' . $e->getMessage());
+
+            try {
+                Log::info('Cloudinary config for update:', [
+                    'cloud_name' => config('cloudinary.cloud_name'),
+                    'api_key' => config('cloudinary.api_key'),
+                    'url' => config('cloudinary.url')
+                ]);
+
+                $result = Cloudinary::upload($this->gambar->getRealPath(), [
+                    'folder' => 'sop-images',
+                    'resource_type' => 'auto',
+                    'public_id' => 'sop_update_' . time()
+                ]);
+                
+                $gambar_url = $result->getSecurePath();
+                Log::info('Update upload success:', ['url' => $gambar_url]);
+            } catch (\Exception $e) {
+                Log::error('Cloudinary update error:', [
+                    'message' => $e->getMessage(),
+                    'code' => $e->getCode(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                throw $e;
+                    }
+                }
+    
+                $data = [
+                    'judul' => $this->judul,
+                    'urutan' => $this->urutan,
+                    'deskripsi' => $this->deskripsi,
+                    'gambar_url' => $gambar_url // ganti gambar_path jadi gambar_url
+                ];
+    
+                // Add quality parameters if SOP type is quality
+                if ($this->sop->kategori === 'quality') {
+                    $data = array_merge($data, [
+                        'needs_standard' => true,
+                        'nilai_standar' => $this->nilai_standar,
+                        'toleransi_min' => $this->toleransi_min,
+                        'toleransi_max' => $this->toleransi_max,
+                        'measurement_type' => $this->measurement_type,
+                        'measurement_unit' => $this->measurement_unit,
+                        'interval_value' => $this->interval_value,
+                        'interval_unit' => $this->interval_unit
+                    ]);
+                }
+    
+                $step->update($data);
+    
+                $this->reset(['judul', 'urutan', 'deskripsi', 'gambar', 'editId',
+                             'nilai_standar', 'toleransi_min', 'toleransi_max',
+                             'measurement_type', 'measurement_unit', 
+                             'interval_value', 'interval_unit']);
+                $this->closeModal();
+                session()->flash('success', 'Step berhasil diupdate');
+            } catch (\Exception $e) {
+                Log::error('Update method failed', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                session()->flash('error', 'Gagal mengupdate data: ' . $e->getMessage());
+            }
         }
-    }
 
     
         public function confirmDelete($id)
