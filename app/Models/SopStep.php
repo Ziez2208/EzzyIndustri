@@ -11,7 +11,7 @@ class SopStep extends Model
         'urutan',
         'judul',
         'deskripsi',
-        'gambar_path',
+        'gambar_url', // Ganti gambar_path menjadi gambar_url
         'is_checkpoint',
         'needs_standard',
         'nilai_standar',
