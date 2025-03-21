@@ -25,6 +25,13 @@ return [
             'root' => storage_path('app/excel'),
             'throw' => false,
         ],
+    
+        'cloudinary' => [
+            'driver' => 'cloudinary',
+            'api_key' => env('CLOUDINARY_API_KEY', '752562542316518'),
+            'api_secret' => env('CLOUDINARY_API_SECRET', 'fLMSNG_K3Xq3fz7pzmW7AXs72R0'),
+            'cloud_name' => env('CLOUDINARY_CLOUD_NAME', 'dncabigef'),
+        ],
     ],
 
     'links' => [

@@ -18,7 +18,8 @@ class Sop extends Model
         'approved_by',
         'created_date',
         'approved_at',
-        'approval_status'
+        'approval_status',
+        'image_url' // tambah field baru
     ];
 
     protected $casts = [

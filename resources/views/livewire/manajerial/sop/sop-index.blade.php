@@ -77,6 +77,20 @@
                                 @error('versi') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
 
+                            <div class="mb-3">
+                                <label class="form-label">Gambar SOP</label>
+                                <input type="file" class="form-control" wire:model="image" accept="image/*">
+                                @error('image') <span class="text-danger">{{ $message }}</span> @enderror
+                                
+                                <div wire:loading wire:target="image">
+                                    Uploading...
+                                </div>
+                                
+                                @if ($image)
+                                    <img src="{{ $image->temporaryUrl() }}" class="mt-2 img-fluid" style="max-height: 200px">
+                                @endif
+                            </div>
+
                             <button type="submit" class="btn btn-primary">
                                 {{ $isEditing ? 'Update' : 'Simpan' }}
                             </button>

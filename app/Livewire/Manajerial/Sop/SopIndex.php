@@ -7,6 +7,8 @@ use App\Models\Sop;
 use App\Models\Machine;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
+use Livewire\WithFileUploads;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 
 class SopIndex extends Component
@@ -21,6 +23,8 @@ class SopIndex extends Component
     public $product;
     public $product_id;
     public $no_sop;
+    use WithFileUploads;
+
 
     protected $rules = [
         'no_sop' => 'required|unique:sops,no_sop',
@@ -29,7 +33,8 @@ class SopIndex extends Component
         'deskripsi' => 'nullable',
         'versi' => 'required',
         'machine_id' => 'required_if:kategori,produksi,safety|exists:machines,id|nullable',
-        'product_id' => 'required_if:kategori,quality|exists:products,id|nullable'
+        'product_id' => 'required_if:kategori,quality|exists:products,id|nullable',
+        'image' => 'nullable|image|max:2048' // tambah validasi
     ];
 
     public function render()
@@ -44,9 +49,15 @@ class SopIndex extends Component
     public function store()
     {
         $this->validate();
+        
+        $imageUrl = null;
+        if ($this->image) {
+            $result = Cloudinary::upload($this->image->getRealPath());
+            $imageUrl = $result->getSecurePath();
+        }
 
         Sop::create([
-            'no_sop' => strtoupper($this->no_sop), // Tambahkan ini dan ubah ke uppercase
+            'no_sop' => strtoupper($this->no_sop),
             'nama' => $this->nama,
             'kategori' => $this->kategori,
             'deskripsi' => $this->deskripsi,
@@ -55,10 +66,11 @@ class SopIndex extends Component
             'product_id' => $this->product_id,
             'created_by' => Auth::id(),
             'created_date' => now(),
-            'approval_status' => 'draft'
+            'approval_status' => 'draft',
+            'image_url' => $imageUrl
         ]);
 
-        $this->reset(['no_sop', 'nama', 'kategori', 'deskripsi', 'versi', 'machine_id', 'product_id']);
+        $this->reset(['no_sop', 'nama', 'kategori', 'deskripsi', 'versi', 'machine_id', 'product_id', 'image']);
         session()->flash('success', 'SOP berhasil ditambahkan');
     }
 
