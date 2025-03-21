@@ -46,12 +46,12 @@ Route::middleware(['auth'])->group(function () {
             // Log semua request data
             \Sentry\captureMessage('Request data: ' . json_encode(request()->all()), Severity::info());
             
-            if (!request()->hasFile('file')) {
+            if (!request()->hasFile('files')) { // Changed from 'file' to 'files'
                 \Sentry\captureMessage('No file in request. Files array: ' . json_encode(request()->allFiles()), Severity::warning());
                 return response()->json(['message' => 'No file uploaded'], 400);
             }
             
-            $file = request()->file('file');
+            $file = request()->file('files'); // Changed from 'file' to 'files'
             \Sentry\captureMessage('File received', Severity::info());
             \Sentry\withScope(function ($scope) use ($file) {
                 $scope->setExtra('file_info', [
