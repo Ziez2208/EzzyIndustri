@@ -51,24 +51,23 @@ Route::middleware(['auth'])->group(function () {
                 return response()->json(['message' => 'No file uploaded'], 400);
             }
             
-            $file = request()->file('files');
+            $files = request()->file('files');
+            $file = is_array($files) ? $files[0] : $files; // Handle both single file and array
+            
             \Sentry\captureMessage('File received', Severity::info());
-            
-            // Log storage path
-            \Sentry\captureMessage('Attempting to store in path: storage/app/public/temp', Severity::info());
-            
-            try {
-                $path = $file->store('temp', 'public');
-                \Sentry\captureMessage('File stored successfully at: ' . $path, Severity::info());
-                return response()->json([
-                    'message' => 'success',
-                    'path' => $path
+            \Sentry\withScope(function ($scope) use ($file) {
+                $scope->setExtra('file_info', [
+                    'filename' => $file->getClientOriginalName(),
+                    'size' => $file->getSize(),
+                    'mime' => $file->getMimeType()
                 ]);
-            } catch (\Exception $storageError) {
-                \Sentry\captureException($storageError);
-                \Sentry\captureMessage('Storage error: ' . $storageError->getMessage(), Severity::error());
-                throw $storageError;
-            }
+            });
+            
+            $path = $file->store('temp', 'public');
+            return response()->json([
+                'message' => 'success',
+                'path' => $path
+            ]);
         } catch (\Exception $e) {
             \Sentry\captureException($e);
             return response()->json(['message' => 'Upload failed: ' . $e->getMessage()], 500);
