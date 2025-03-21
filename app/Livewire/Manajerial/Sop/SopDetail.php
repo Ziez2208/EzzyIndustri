@@ -111,20 +111,17 @@ class SopDetail extends Component
         try {
             $gambar_url = null;
             if ($this->gambar) {
-                Log::info('Starting image upload to Cloudinary', [
-                    'original_name' => $this->gambar->getClientOriginalName(),
-                    'size' => $this->gambar->getSize(),
-                    'mime_type' => $this->gambar->getMimeType()
-                ]);
-    
                 try {
-                    $result = Cloudinary::upload($this->gambar->getRealPath());
+                    // Tambah folder dan options
+                    $result = Cloudinary::upload($this->gambar->getRealPath(), [
+                        'folder' => 'sop-images',
+                        'resource_type' => 'auto',
+                        'public_id' => 'sop_' . time() // Unique name
+                    ]);
                     $gambar_url = $result->getSecurePath();
-                    Log::info('Cloudinary upload successful', ['url' => $gambar_url]);
                 } catch (\Exception $e) {
                     Log::error('Cloudinary upload failed', [
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
+                        'error' => $e->getMessage()
                     ]);
                     throw $e;
                 }
