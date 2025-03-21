@@ -11,6 +11,7 @@ use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
+
 class SopDetail extends Component
 {
     use WithFileUploads;
@@ -61,8 +62,13 @@ class SopDetail extends Component
         'shift' => 'Shift'
     ];
 
+   
+
     public function mount($id)
     {
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
         $this->sop = Sop::with(['steps', 'machine', 'product'])->findOrFail($id);
     }
 
