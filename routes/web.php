@@ -43,11 +43,11 @@ Route::middleware(['auth'])->group(function () {
         \Sentry\captureMessage('Upload attempt started', Severity::info());
         
         try {
+            // Log semua request data
+            \Sentry\captureMessage('Request data: ' . json_encode(request()->all()), Severity::info());
+            
             if (!request()->hasFile('file')) {
-                \Sentry\captureMessage('No file in request', Severity::warning());
-                \Sentry\withScope(function ($scope) {
-                    $scope->setExtra('request_data', request()->all());
-                });
+                \Sentry\captureMessage('No file in request. Files array: ' . json_encode(request()->allFiles()), Severity::warning());
                 return response()->json(['message' => 'No file uploaded'], 400);
             }
             
