@@ -104,7 +104,12 @@
 
     <div class="col-12">
         <label class="form-label">Image (Optional)</label>
-        <input type="file" class="form-control" wire:model.live="gambar" accept="image/*">
+        <input type="file" 
+            class="form-control" 
+            wire:model.live="gambar" 
+            wire:loading.attr="disabled"
+            id="gambar-{{ $iteration }}"
+            accept="image/*">
         
         <div wire:loading wire:target="gambar">
             <div class="spinner-border spinner-border-sm text-primary mt-2" role="status">

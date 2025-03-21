@@ -17,6 +17,9 @@ class SopDetail extends Component
 {
     use WithFileUploads;
 
+    // Add this property
+    public $iteration = 0;
+    
     // Basic properties
     public $sop;
     public $judul;
@@ -118,6 +121,7 @@ class SopDetail extends Component
                             'public_id' => 'sop_' . time()
                         ]);
                         $gambar_url = $result->getSecurePath();
+                        $this->iteration++; // Add this after successful upload
                     } catch (\Exception $e) {
                         Log::error('Upload gagal: ' . $e->getMessage());
                         throw $e;
@@ -175,6 +179,7 @@ class SopDetail extends Component
         {
             $this->showModal = false;
             $this->isEditing = false;
+            $this->iteration++; // Add this to reset file input
         }
         public function edit($id)
         {
