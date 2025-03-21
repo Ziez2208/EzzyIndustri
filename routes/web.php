@@ -20,6 +20,7 @@ use App\Livewire\Manajerial\OeeDashboard;
 use App\Livewire\Manajerial\OeeDetail;
 use App\Http\Controllers\OeePdfController;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 
 
@@ -34,9 +35,24 @@ Route::get('/login', Login::class)->name('login')->middleware('guest');
 Route::get('/production/{productionId}/report', ProductionReport::class)->name('production.report');
 
 // Add this before the manajerial routes group
+// Modify the Livewire upload route
 Route::middleware(['auth'])->group(function () {
     Route::post('/livewire/upload-file', function() {
-        return response()->json(['message' => 'success']);
+        if (!request()->hasFile('file')) {
+            return response()->json(['message' => 'No file uploaded'], 400);
+        }
+        
+        try {
+            $file = request()->file('file');
+            $path = $file->store('temp', 'public');
+            return response()->json([
+                'message' => 'success',
+                'path' => $path
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Upload error: ' . $e->getMessage());
+            return response()->json(['message' => 'Upload failed'], 500);
+        }
     })->name('livewire.upload-file');
 });
 
