@@ -106,8 +106,8 @@
         <label class="form-label">Image (Optional)</label>
         <input type="file" 
             class="form-control" 
-            wire:model="gambar"
-            id="gambar-{{ $iteration }}"
+            wire:model.defer="gambar"
+            id="gambar-{{ now() }}"
             accept="image/*">
         
         <div wire:loading wire:target="gambar">
@@ -119,15 +119,13 @@
 
         @error('gambar') <span class="text-danger">{{ $message }}</span> @enderror
         
-        @if($gambar && !$errors->has('gambar'))
+        @if($gambar)
             <div class="mt-2 position-relative">
-                @if(is_string($gambar))
-                    <img src="{{ $gambar }}" class="img-thumbnail" style="max-height: 200px">
-                @else
-                    <img src="{{ $gambar->temporaryUrl() }}" class="img-thumbnail" style="max-height: 200px">
-                @endif
+                <img src="{{ $gambar instanceof \Illuminate\Http\UploadedFile ? $gambar->temporaryUrl() : $gambar }}" 
+                     class="img-thumbnail" 
+                     style="max-height: 200px">
                 <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" 
-                        wire:click="$set('gambar', null)">
+                        wire:click="resetImage">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
