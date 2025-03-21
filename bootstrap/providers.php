@@ -11,4 +11,5 @@ return [
     App\Providers\ViewComposerServiceProvider::class,
     App\Providers\LivewireServiceProvider::class,
     App\Providers\RouteServiceProvider::class,
+    
 ];

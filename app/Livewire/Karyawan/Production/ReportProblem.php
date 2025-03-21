@@ -18,11 +18,15 @@ class ReportProblem extends Component
     public $problemType;
     public $notes;
     public $photo;
-
-    #[On('openProblemModal')] 
-    public function openProblemModal($productionId)
+    
+    public function mount($productionId = null)
     {
         $this->productionId = $productionId;
+    }
+
+    #[On('openProblemModal')] 
+    public function openProblemModal()
+    {
         $this->dispatch('show-problem-modal');
     }
 
