@@ -46,29 +46,32 @@ Route::middleware(['auth'])->group(function () {
             // Log semua request data
             \Sentry\captureMessage('Request data: ' . json_encode(request()->all()), Severity::info());
             
-            if (!request()->hasFile('files')) { // Changed from 'file' to 'files'
+            if (!request()->hasFile('files')) {
                 \Sentry\captureMessage('No file in request. Files array: ' . json_encode(request()->allFiles()), Severity::warning());
                 return response()->json(['message' => 'No file uploaded'], 400);
             }
             
-            $file = request()->file('files'); // Changed from 'file' to 'files'
+            $file = request()->file('files');
             \Sentry\captureMessage('File received', Severity::info());
-            \Sentry\withScope(function ($scope) use ($file) {
-                $scope->setExtra('file_info', [
-                    'filename' => $file->getClientOriginalName(),
-                    'size' => $file->getSize(),
-                    'mime' => $file->getMimeType()
-                ]);
-            });
             
-            $path = $file->store('temp', 'public');
-            return response()->json([
-                'message' => 'success',
-                'path' => $path
-            ]);
+            // Log storage path
+            \Sentry\captureMessage('Attempting to store in path: storage/app/public/temp', Severity::info());
+            
+            try {
+                $path = $file->store('temp', 'public');
+                \Sentry\captureMessage('File stored successfully at: ' . $path, Severity::info());
+                return response()->json([
+                    'message' => 'success',
+                    'path' => $path
+                ]);
+            } catch (\Exception $storageError) {
+                \Sentry\captureException($storageError);
+                \Sentry\captureMessage('Storage error: ' . $storageError->getMessage(), Severity::error());
+                throw $storageError;
+            }
         } catch (\Exception $e) {
             \Sentry\captureException($e);
-            return response()->json(['message' => 'Upload failed'], 500);
+            return response()->json(['message' => 'Upload failed: ' . $e->getMessage()], 500);
         }
     })->name('livewire.upload-file');
 });
