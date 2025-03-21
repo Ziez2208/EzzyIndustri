@@ -31,7 +31,8 @@
     <link href="{{ asset('assets/css/custom/pages/checksheet-table.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/css/custom/pages/quality-check.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/css/custom/pages/oee-detail.css') }}" rel="stylesheet">
-
+    @csrf
+    @livewireStyles
 </head>
 
 <body>

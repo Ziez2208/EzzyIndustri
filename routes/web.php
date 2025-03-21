@@ -33,8 +33,14 @@ Route::get('/login', Login::class)->name('login')->middleware('guest');
 
 Route::get('/production/{productionId}/report', ProductionReport::class)->name('production.report');
 
+// Add this before the manajerial routes group
+Route::middleware(['auth'])->group(function () {
+    Route::post('/livewire/upload-file', function() {
+        return response()->json(['message' => 'success']);
+    })->name('livewire.upload-file');
+});
+
 // Manajerial Routes
-// Inside manajerial routes group
 Route::prefix('manajerial')->middleware(['auth', 'role:manajerial'])->group(function () {
     Route::get('/dashboard', \App\Livewire\Manajerial\Dashboard::class)->name('manajerial.dashboard');    
     Route::get('/production/problems', ProblemApproval::class)->name('manajerial.production.problems');
