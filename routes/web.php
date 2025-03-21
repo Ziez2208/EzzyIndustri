@@ -52,7 +52,17 @@ Route::middleware(['auth'])->group(function () {
             }
             
             $files = request()->file('files');
-            $file = is_array($files) ? $files[0] : $files; // Handle both single file and array
+            
+            // Validate files
+            if (empty($files)) {
+                return response()->json(['message' => 'Empty files array'], 400);
+            }
+            
+            $file = is_array($files) ? $files[0] : $files;
+            
+            if (!$file || !$file->isValid()) {
+                return response()->json(['message' => 'Invalid file upload'], 400);
+            }
             
             \Sentry\captureMessage('File received', Severity::info());
             \Sentry\withScope(function ($scope) use ($file) {
