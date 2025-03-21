@@ -106,42 +106,20 @@ class SopDetail extends Component
     
         public function store()
         {
-            Log::info('Starting store method');
             $this->validate($this->rules());
     
             try {
                 $gambar_url = null;
                 if ($this->gambar) {
-                    Log::info('File details:', [
-                        'name' => $this->gambar->getClientOriginalName(),
-                        'size' => $this->gambar->getSize(),
-                        'mime' => $this->gambar->getMimeType(),
-                        'temp_path' => $this->gambar->getRealPath()
-                    ]);
-    
                     try {
-                        Log::info('Cloudinary config:', [
-                            'cloud_name' => config('cloudinary.cloud_name'),
-                            'api_key' => config('cloudinary.api_key'),
-                            'url' => config('cloudinary.url')
-                        ]);
-    
                         $result = Cloudinary::upload($this->gambar->getRealPath(), [
                             'folder' => 'sop-images',
                             'resource_type' => 'auto',
                             'public_id' => 'sop_' . time()
                         ]);
-                        
                         $gambar_url = $result->getSecurePath();
-                        Log::info('Upload success:', ['url' => $gambar_url]);
                     } catch (\Exception $e) {
-                        Log::error('Cloudinary upload error:', [
-                            'message' => $e->getMessage(),
-                            'code' => $e->getCode(),
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'trace' => $e->getTraceAsString()
-                        ]);
+                        Log::error('Upload gagal: ' . $e->getMessage());
                         throw $e;
                     }
                 }
@@ -221,45 +199,23 @@ class SopDetail extends Component
     
         public function update()
         {
-            Log::info('Starting update method');
-    $this->validate($this->rules());
-
-    try {
-        $step = $this->sop->steps()->find($this->editId);
-        
-        $gambar_url = $step->gambar_url;
-        if ($this->gambar) {
-            Log::info('Update file details:', [
-                'name' => $this->gambar->getClientOriginalName(),
-                'size' => $this->gambar->getSize(),
-                'mime' => $this->gambar->getMimeType(),
-                'temp_path' => $this->gambar->getRealPath()
-            ]);
-
+            $this->validate($this->rules());
+    
             try {
-                Log::info('Cloudinary config for update:', [
-                    'cloud_name' => config('cloudinary.cloud_name'),
-                    'api_key' => config('cloudinary.api_key'),
-                    'url' => config('cloudinary.url')
-                ]);
-
-                $result = Cloudinary::upload($this->gambar->getRealPath(), [
-                    'folder' => 'sop-images',
-                    'resource_type' => 'auto',
-                    'public_id' => 'sop_update_' . time()
-                ]);
-                
-                $gambar_url = $result->getSecurePath();
-                Log::info('Update upload success:', ['url' => $gambar_url]);
-            } catch (\Exception $e) {
-                Log::error('Cloudinary update error:', [
-                    'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                throw $e;
+                $step = $this->sop->steps()->find($this->editId);
+                $gambar_url = $step->gambar_url;
+    
+                if ($this->gambar) {
+                    try {
+                        $result = Cloudinary::upload($this->gambar->getRealPath(), [
+                            'folder' => 'sop-images',
+                            'resource_type' => 'auto',
+                            'public_id' => 'sop_update_' . time()
+                        ]);
+                        $gambar_url = $result->getSecurePath();
+                    } catch (\Exception $e) {
+                        Log::error('Update gagal: ' . $e->getMessage());
+                        throw $e;
                     }
                 }
     
