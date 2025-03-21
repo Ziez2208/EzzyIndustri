@@ -106,9 +106,13 @@
         <label class="form-label">Image (Optional)</label>
         <input type="file" 
             class="form-control" 
-            wire:model.live="gambar" 
+            wire:model="gambar"
+            x-data="{}"
+            x-on:livewire-upload-start="$wire.isUploading = true"
+            x-on:livewire-upload-finish="$wire.isUploading = false"
+            x-on:livewire-upload-error="$wire.isUploading = false"
             wire:loading.attr="disabled"
-            id="gambar-{{ $iteration }}"
+            id="gambar-{{ now() }}"
             accept="image/*">
         
         <div wire:loading wire:target="gambar">
