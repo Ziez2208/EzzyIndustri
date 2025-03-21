@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -18,6 +19,10 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrap();
         
+        if(config('app.env') === 'production') {
+            URL::forceScheme('https');
+        }
+
         // Add error handling for pagination views
         View::share('paginationError', function ($e) {
             Log::error('Pagination error:', [
