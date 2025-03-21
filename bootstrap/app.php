@@ -6,6 +6,8 @@ use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\CheckRole;
 use Illuminate\Console\Scheduling\Schedule;
 use App\Console\Commands\GenerateMaintenanceSchedules;
+use Sentry\Laravel\Integration;
+
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withProviders()
@@ -26,7 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('maintenance:generate-schedules')->everyMinute();
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        
+        Integration::handles($exceptions);
+
 
         
     })->create();

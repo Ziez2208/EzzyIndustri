@@ -21,6 +21,8 @@ use App\Livewire\Manajerial\OeeDetail;
 use App\Http\Controllers\OeePdfController;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Sentry\Laravel\Integration;
+use Sentry\Severity;
 
 
 
@@ -38,19 +40,34 @@ Route::get('/production/{productionId}/report', ProductionReport::class)->name('
 // Modify the Livewire upload route
 Route::middleware(['auth'])->group(function () {
     Route::post('/livewire/upload-file', function() {
-        if (!request()->hasFile('file')) {
-            return response()->json(['message' => 'No file uploaded'], 400);
-        }
+        \Sentry\captureMessage('Upload attempt started', Severity::info());
         
         try {
+            if (!request()->hasFile('file')) {
+                \Sentry\captureMessage('No file in request', Severity::warning());
+                \Sentry\withScope(function ($scope) {
+                    $scope->setExtra('request_data', request()->all());
+                });
+                return response()->json(['message' => 'No file uploaded'], 400);
+            }
+            
             $file = request()->file('file');
+            \Sentry\captureMessage('File received', Severity::info());
+            \Sentry\withScope(function ($scope) use ($file) {
+                $scope->setExtra('file_info', [
+                    'filename' => $file->getClientOriginalName(),
+                    'size' => $file->getSize(),
+                    'mime' => $file->getMimeType()
+                ]);
+            });
+            
             $path = $file->store('temp', 'public');
             return response()->json([
                 'message' => 'success',
                 'path' => $path
             ]);
         } catch (\Exception $e) {
-            Log::error('Upload error: ' . $e->getMessage());
+            \Sentry\captureException($e);
             return response()->json(['message' => 'Upload failed'], 500);
         }
     })->name('livewire.upload-file');
