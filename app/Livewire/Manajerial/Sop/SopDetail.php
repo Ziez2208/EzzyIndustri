@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+use Illuminate\Support\Facades\Log;
 
 
 class SopDetail extends Component
@@ -110,8 +111,23 @@ class SopDetail extends Component
         try {
             $gambar_url = null;
             if ($this->gambar) {
-                $result = Cloudinary::upload($this->gambar->getRealPath());
-                $gambar_url = $result->getSecurePath();
+                Log::info('Starting image upload to Cloudinary', [
+                    'original_name' => $this->gambar->getClientOriginalName(),
+                    'size' => $this->gambar->getSize(),
+                    'mime_type' => $this->gambar->getMimeType()
+                ]);
+    
+                try {
+                    $result = Cloudinary::upload($this->gambar->getRealPath());
+                    $gambar_url = $result->getSecurePath();
+                    Log::info('Cloudinary upload successful', ['url' => $gambar_url]);
+                } catch (\Exception $e) {
+                    Log::error('Cloudinary upload failed', [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    throw $e;
+                }
             }
     
             $data = [
@@ -144,6 +160,10 @@ class SopDetail extends Component
             $this->closeModal();
             session()->flash('success', 'Step berhasil ditambahkan');
         } catch (\Exception $e) {
+            Log::error('Store method failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             session()->flash('error', 'Gagal menyimpan data: ' . $e->getMessage());
         }
     }
@@ -192,8 +212,23 @@ class SopDetail extends Component
             
             $gambar_url = $step->gambar_url;
             if ($this->gambar) {
-                $result = Cloudinary::upload($this->gambar->getRealPath());
-                $gambar_url = $result->getSecurePath();
+                Log::info('Starting image update to Cloudinary', [
+                    'original_name' => $this->gambar->getClientOriginalName(),
+                    'size' => $this->gambar->getSize(),
+                    'mime_type' => $this->gambar->getMimeType()
+                ]);
+    
+                try {
+                    $result = Cloudinary::upload($this->gambar->getRealPath());
+                    $gambar_url = $result->getSecurePath();
+                    Log::info('Cloudinary update successful', ['url' => $gambar_url]);
+                } catch (\Exception $e) {
+                    Log::error('Cloudinary update failed', [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    throw $e;
+                }
             }
     
             $data = [
@@ -226,6 +261,10 @@ class SopDetail extends Component
             $this->closeModal();
             session()->flash('success', 'Step berhasil diupdate');
         } catch (\Exception $e) {
+            Log::error('Update method failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             session()->flash('error', 'Gagal mengupdate data: ' . $e->getMessage());
         }
     }
