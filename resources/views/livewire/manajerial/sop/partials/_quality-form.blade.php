@@ -107,12 +107,7 @@
         <input type="file" 
             class="form-control" 
             wire:model="gambar"
-            x-data="{}"
-            x-on:livewire-upload-start="$wire.isUploading = true"
-            x-on:livewire-upload-finish="$wire.isUploading = false"
-            x-on:livewire-upload-error="$wire.isUploading = false"
-            wire:loading.attr="disabled"
-            id="gambar-{{ now() }}"
+            id="gambar-{{ $iteration }}"
             accept="image/*">
         
         <div wire:loading wire:target="gambar">
@@ -126,7 +121,11 @@
         
         @if($gambar && !$errors->has('gambar'))
             <div class="mt-2 position-relative">
-                <img src="{{ $gambar->temporaryUrl() }}" class="img-thumbnail" style="max-height: 200px">
+                @if(is_string($gambar))
+                    <img src="{{ $gambar }}" class="img-thumbnail" style="max-height: 200px">
+                @else
+                    <img src="{{ $gambar->temporaryUrl() }}" class="img-thumbnail" style="max-height: 200px">
+                @endif
                 <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" 
                         wire:click="$set('gambar', null)">
                     <i class="bi bi-x"></i>

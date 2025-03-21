@@ -17,7 +17,7 @@ class SopDetail extends Component
 {
     use WithFileUploads;
 
-    // Add this property
+    public $isUploading = false;
     public $iteration = 0;
     
     // Basic properties
@@ -90,7 +90,7 @@ class SopDetail extends Component
                 'judul' => 'required',
                 'deskripsi' => 'required',
                 'urutan' => 'required|integer',
-                'gambar' => 'nullable|image|max:2048',
+                'gambar' => 'nullable|image|max:2048', // Pastikan validasi file ada
             ];
     
             if ($this->sop->kategori === 'quality') {
