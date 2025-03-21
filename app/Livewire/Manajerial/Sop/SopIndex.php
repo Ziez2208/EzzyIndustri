@@ -13,6 +13,8 @@ use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class SopIndex extends Component
 {
+    use WithFileUploads;
+    
     public $nama;
     public $kategori;
     public $deskripsi;
@@ -23,8 +25,7 @@ class SopIndex extends Component
     public $product;
     public $product_id;
     public $no_sop;
-    use WithFileUploads;
-
+    public $image; // tambah property ini
 
     protected $rules = [
         'no_sop' => 'required|unique:sops,no_sop',
