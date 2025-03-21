@@ -29,13 +29,12 @@
                         Every {{ $step->interval_value }} {{ $step->interval_unit }}
                     </td>
                     <td class="text-center">
-                        @if($step->gambar_path)
-                            <img src="{{ asset('storage/' . $step->gambar_path) }}" 
+                        @if($step->gambar_url)
+                            <img src="{{ $step->gambar_url }}" 
                                  alt="Step Image" 
                                  class="img-thumbnail" 
                                  style="max-height: 50px;"
-                                 onclick="window.open(this.src, '_blank')"
-                            >
+                                 onclick="window.open(this.src, '_blank')">
                         @else
                             -
                         @endif

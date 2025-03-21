@@ -9,6 +9,7 @@ use App\Models\SopStep;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class SopDetail extends Component
 {
@@ -101,18 +102,17 @@ class SopDetail extends Component
         $this->validate($this->rules());
     
         try {
-            $gambar_path = null;
+            $gambar_url = null;
             if ($this->gambar) {
-                // Simpan gambar ke storage/app/public/sop-images
-                $filename = time() . '_' . $this->gambar->getClientOriginalName();
-                $gambar_path = $this->gambar->storeAs('sop-images', $filename, 'public');
+                $result = Cloudinary::upload($this->gambar->getRealPath());
+                $gambar_url = $result->getSecurePath();
             }
     
             $data = [
                 'judul' => $this->judul,
                 'urutan' => $this->urutan,
                 'deskripsi' => $this->deskripsi,
-                'gambar_path' => $gambar_path
+                'gambar_url' => $gambar_url // ganti gambar_path jadi gambar_url
             ];
     
             // Add quality parameters if SOP type is quality
@@ -184,22 +184,17 @@ class SopDetail extends Component
         try {
             $step = $this->sop->steps()->find($this->editId);
             
-            $gambar_path = $step->gambar_path;
+            $gambar_url = $step->gambar_url;
             if ($this->gambar) {
-                // Hapus gambar lama
-                if ($step->gambar_path) {
-                    Storage::disk('public')->delete($step->gambar_path);
-                }
-                // Simpan gambar baru
-                $filename = time() . '_' . $this->gambar->getClientOriginalName();
-                $gambar_path = $this->gambar->storeAs('sop-images', $filename, 'public');
+                $result = Cloudinary::upload($this->gambar->getRealPath());
+                $gambar_url = $result->getSecurePath();
             }
     
             $data = [
                 'judul' => $this->judul,
                 'urutan' => $this->urutan,
                 'deskripsi' => $this->deskripsi,
-                'gambar_path' => $gambar_path
+                'gambar_url' => $gambar_url // ganti gambar_path jadi gambar_url
             ];
     
             // Add quality parameters if SOP type is quality
