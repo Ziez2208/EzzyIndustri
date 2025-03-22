@@ -117,14 +117,20 @@ class SopDetail extends Component
                     try {
                         $result = Cloudinary::upload($this->gambar->getRealPath(), [
                             'folder' => 'sop-images',
-                            'resource_type' => 'auto',
-                            'public_id' => 'sop_' . time()
+                            'resource_type' => 'image',
+                            'public_id' => 'sop_' . time(),
+                            'overwrite' => true,
+                            'transformation' => [
+                                'quality' => 'auto',
+                                'fetch_format' => 'auto'
+                            ]
                         ]);
                         $gambar_url = $result->getSecurePath();
-                        $this->iteration++; // Add this after successful upload
+                        $this->iteration++;
                     } catch (\Exception $e) {
-                        Log::error('Upload gagal: ' . $e->getMessage());
-                        throw $e;
+                        Log::error('Cloudinary upload failed: ' . $e->getMessage());
+                        session()->flash('error', 'Failed to upload image');
+                        return;
                     }
                 }
     
@@ -212,15 +218,28 @@ class SopDetail extends Component
     
                 if ($this->gambar) {
                     try {
+                        // Delete old image if exists
+                        if ($gambar_url) {
+                            $public_id = last(explode('/', parse_url($gambar_url)['path']));
+                            Cloudinary::destroy($public_id);
+                        }
+    
                         $result = Cloudinary::upload($this->gambar->getRealPath(), [
                             'folder' => 'sop-images',
-                            'resource_type' => 'auto',
-                            'public_id' => 'sop_update_' . time()
+                            'resource_type' => 'image',
+                            'public_id' => 'sop_update_' . time(),
+                            'overwrite' => true,
+                            'transformation' => [
+                                'quality' => 'auto',
+                                'fetch_format' => 'auto'
+                            ]
                         ]);
                         $gambar_url = $result->getSecurePath();
+                        $this->iteration++;
                     } catch (\Exception $e) {
-                        Log::error('Update gagal: ' . $e->getMessage());
-                        throw $e;
+                        Log::error('Cloudinary upload failed: ' . $e->getMessage());
+                        session()->flash('error', 'Failed to upload image');
+                        return;
                     }
                 }
     

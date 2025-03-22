@@ -104,31 +104,38 @@
 
     <div class="col-12">
         <label class="form-label">Image (Optional)</label>
-        <input type="file" 
-            class="form-control" 
-            wire:model.defer="gambar"
-            id="gambar-{{ now() }}"
-            accept="image/*">
-        
-        <div wire:loading wire:target="gambar">
-            <div class="spinner-border spinner-border-sm text-primary mt-2" role="status">
-                <span class="visually-hidden">Loading...</span>
+        <div x-data="{ uploading: false }" class="form-group">
+            <input type="file" 
+                class="form-control" 
+                wire:model="gambar"
+                x-on:livewire-upload-start="uploading = true"
+                x-on:livewire-upload-finish="uploading = false"
+                x-on:livewire-upload-error="uploading = false"
+                id="gambar-{{ now() }}"
+                accept="image/*">
+            
+            <div x-show="uploading">
+                <div class="spinner-border spinner-border-sm text-primary mt-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <small class="text-muted ms-2">Uploading image...</small>
             </div>
-            <small class="text-muted ms-2">Uploading image...</small>
-        </div>
 
-        @error('gambar') <span class="text-danger">{{ $message }}</span> @enderror
-        
-        @if($gambar)
-            <div class="mt-2 position-relative">
-                <img src="{{ $gambar instanceof \Illuminate\Http\UploadedFile ? $gambar->temporaryUrl() : $gambar }}" 
-                     class="img-thumbnail" 
-                     style="max-height: 200px">
-                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" 
-                        wire:click="resetImage">
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-        @endif
+            @error('gambar') <span class="text-danger">{{ $message }}</span> @enderror
+            
+            @if($gambar)
+                <div class="mt-2 position-relative">
+                    @if(is_string($gambar))
+                        <img src="{{ $gambar }}" class="img-thumbnail" style="max-height: 200px">
+                    @else
+                        <img src="{{ $gambar->temporaryUrl() }}" class="img-thumbnail" style="max-height: 200px">
+                    @endif
+                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" 
+                            wire:click="$set('gambar', null)">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            @endif
+        </div>
     </div>
 </div>
