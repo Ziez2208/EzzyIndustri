@@ -40,24 +40,55 @@ class CloudinaryTest extends Component
         try {
             $this->addLog('Starting upload process...');
             
-            $result = Cloudinary::upload($this->image->getRealPath(), [
+            // Tambah error handling dan logging lebih detail
+            if (!$this->image) {
+                throw new \Exception('No image file provided');
+            }
+
+            // Pastikan file bisa diakses
+            $path = $this->image->getRealPath();
+            if (!file_exists($path)) {
+                throw new \Exception('Cannot access temporary file');
+            }
+
+            // Tambah konfigurasi lebih detail
+            $result = Cloudinary::upload($path, [
                 'folder' => 'testing',
-                'resource_type' => 'image'
+                'resource_type' => 'image',
+                'public_id' => 'test_' . time(),
+                'overwrite' => true,
+                'notification_url' => null,
+                'transformation' => [
+                    'quality' => 'auto',
+                    'fetch_format' => 'auto'
+                ]
             ]);
+
+            // Validasi response
+            if (!$result || !$result->getSecurePath()) {
+                throw new \Exception('Invalid response from Cloudinary');
+            }
 
             $this->uploadedImages[] = [
                 'url' => $result->getSecurePath(),
-                'public_id' => $result->getPublicId()
+                'public_id' => $result->getPublicId(),
+                'created_at' => now()->toDateTimeString()
             ];
 
             $this->addLog('Image uploaded successfully: ' . $result->getPublicId());
+            $this->addLog('URL: ' . $result->getSecurePath());
             
             $this->reset('image');
             $this->iteration++;
             session()->flash('success', 'Image uploaded successfully!');
         } catch (\Exception $e) {
-            $this->addLog($e->getMessage(), 'error');
-            Log::error('Upload failed: ' . $e->getMessage());
+            $this->addLog('Error details: ' . $e->getMessage(), 'error');
+            $this->addLog('File info: ' . ($this->image ? 'File present' : 'No file'), 'error');
+            Log::error('Upload failed', [
+                'error' => $e->getMessage(),
+                'file' => $this->image ? 'present' : 'null',
+                'trace' => $e->getTraceAsString()
+            ]);
             session()->flash('error', 'Upload failed: ' . $e->getMessage());
         }
     }
