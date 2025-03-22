@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Sentry\Laravel\Integration;
 use Sentry\Severity;
+use App\Livewire\Testing\CloudinaryTest;
 
 
 
@@ -247,3 +248,6 @@ Route::get('/whatsapp/send-simple-test', function () {
         return "Error: " . $e->getMessage();
     }
 })->name('whatsapp.send-simple-test');
+
+// Add this route
+Route::get('/testing/cloudinary', CloudinaryTest::class)->middleware(['auth']);
