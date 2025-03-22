@@ -106,7 +106,7 @@
         <label class="form-label">Image (Optional)</label>
         <input type="file" 
             class="form-control" 
-            wire:model="gambar" 
+            wire:model.live="gambar" 
             wire:loading.attr="disabled"
             id="gambar-{{ $iteration }}"
             accept="image/*">
@@ -118,24 +118,16 @@
             <small class="text-muted ms-2">Uploading image...</small>
         </div>
 
-        <div wire:loading wire:target="store,update">
-            <div class="spinner-border spinner-border-sm text-primary mt-2" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <small class="text-muted ms-2">Saving data...</small>
-        </div>
-
         @error('gambar') <span class="text-danger">{{ $message }}</span> @enderror
         
-        @if($gambar && !$errors->has('gambar'))
-            <div class="mt-2 position-relative">
+        @if($gambar)
+            <div class="mt-2">
                 @if(is_string($gambar))
                     <img src="{{ $gambar }}" class="img-thumbnail" style="max-height: 200px">
-                @else
+                @elseif(method_exists($gambar, 'temporaryUrl'))
                     <img src="{{ $gambar->temporaryUrl() }}" class="img-thumbnail" style="max-height: 200px">
                 @endif
-                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" 
-                        wire:click="$set('gambar', null)">
+                <button type="button" class="btn btn-sm btn-danger" wire:click="resetImage">
                     <i class="bi bi-x"></i>
                 </button>
             </div>
