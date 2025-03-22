@@ -11,6 +11,7 @@ use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Support\Facades\Log;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 
 class SopDetail extends Component
@@ -116,9 +117,34 @@ class SopDetail extends Component
             }
         }
     
+        public function finishUpload($name, $tmpPath, $isMultiple)
+        {
+            try {
+                if (!$tmpPath) {
+                    $this->gambar = null;
+                    return;
+                }
+    
+                if ($isMultiple) {
+                    $files = collect($tmpPath)->map(function ($path) {
+                        return TemporaryUploadedFile::createFromLivewire($path);
+                    })->toArray();
+                    $this->$name = $files;
+                } else {
+                    $this->$name = TemporaryUploadedFile::createFromLivewire($tmpPath[0]);
+                }
+            } catch (\Exception $e) {
+                Log::error('File upload completion failed:', [
+                    'error' => $e->getMessage(),
+                    'tmpPath' => $tmpPath
+                ]);
+                $this->$name = null;
+            }
+        }
+    
         protected function cleanupOldImage($url)
         {
-            if ($url) {
+            if ($url && str_contains($url, 'cloudinary')) {
                 try {
                     $public_id = pathinfo(parse_url($url)['path'], PATHINFO_FILENAME);
                     Cloudinary::destroy('sop-images/' . $public_id);
