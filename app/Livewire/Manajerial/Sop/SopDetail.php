@@ -119,31 +119,33 @@ class SopDetail extends Component
     
         public function finishUpload($name, $tmpPath, $isMultiple)
             {
-                try {
-                    if (empty($tmpPath)) {
-                        $this->$name = null;
-                        return;
-                    }
+                if ($tmpPath === null) {
+                    $this->$name = null;
+                    return;
+                }
     
+                try {
                     if ($isMultiple && is_array($tmpPath)) {
-                        $files = collect($tmpPath)->map(function ($path) {
-                            return $path ? TemporaryUploadedFile::createFromLivewire($path) : null;
-                        })->filter()->toArray();
+                        $files = [];
+                        foreach ($tmpPath as $path) {
+                            if ($path) {
+                                $files[] = TemporaryUploadedFile::createFromLivewire($path);
+                            }
+                        }
                         $this->$name = $files;
                     } else {
-                        $path = is_array($tmpPath) ? ($tmpPath[0] ?? null) : $tmpPath;
+                        $path = is_array($tmpPath) ? array_shift($tmpPath) : $tmpPath;
                         if ($path) {
                             $this->$name = TemporaryUploadedFile::createFromLivewire($path);
-                        } else {
-                            $this->$name = null;
                         }
                     }
                 } catch (\Exception $e) {
-                    Log::error('File upload completion failed:', [
+                    Log::error('Upload gagal:', [
                         'error' => $e->getMessage(),
                         'tmpPath' => $tmpPath
                     ]);
                     $this->$name = null;
+                    session()->flash('error', 'Gagal mengupload file');
                 }
             }
     
