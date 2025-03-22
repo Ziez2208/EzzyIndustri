@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Log;
 
 class Production extends Model
 {
+    protected $primaryKey = 'id';  // tambahkan ini
+    public $incrementing = true;   // tambahkan ini
+    
     protected $fillable = [
         'user_id',
         'machine_id',
