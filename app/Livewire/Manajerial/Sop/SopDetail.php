@@ -107,28 +107,51 @@ class SopDetail extends Component
             return $rules;
         }
     
+        public function updatedGambar()
+        {
+            if ($this->gambar) {
+                $this->validate([
+                    'gambar' => 'image|max:2048'
+                ]);
+            }
+        }
+    
+        protected function cleanupOldImage($url)
+        {
+            if ($url) {
+                try {
+                    $public_id = pathinfo(parse_url($url)['path'], PATHINFO_FILENAME);
+                    Cloudinary::destroy('sop-images/' . $public_id);
+                } catch (\Exception $e) {
+                    Log::error('Failed to delete old image: ' . $e->getMessage());
+                }
+            }
+        }
+    
+        public function resetImage()
+        {
+            $this->gambar = null;
+            $this->iteration++;
+        }
+    
+        // Update the store method
         public function store()
         {
             $this->validate($this->rules());
     
             try {
                 $gambar_url = null;
-                if ($this->gambar) {
+                if ($this->gambar && $this->gambar instanceof \Illuminate\Http\UploadedFile) {
                     try {
                         $result = Cloudinary::upload($this->gambar->getRealPath(), [
                             'folder' => 'sop-images',
                             'resource_type' => 'image',
-                            'public_id' => 'sop_' . time(),
-                            'overwrite' => true,
-                            'transformation' => [
-                                'quality' => 'auto',
-                                'fetch_format' => 'auto'
-                            ]
+                            'public_id' => 'sop_' . time() . '_' . uniqid(),
+                            'overwrite' => true
                         ]);
                         $gambar_url = $result->getSecurePath();
-                        $this->iteration++;
                     } catch (\Exception $e) {
-                        Log::error('Cloudinary upload failed: ' . $e->getMessage());
+                        Log::error('Upload failed: ' . $e->getMessage());
                         session()->flash('error', 'Failed to upload image');
                         return;
                     }
@@ -216,28 +239,18 @@ class SopDetail extends Component
                 $step = $this->sop->steps()->find($this->editId);
                 $gambar_url = $step->gambar_url;
     
-                if ($this->gambar) {
+                if ($this->gambar && $this->gambar instanceof \Illuminate\Http\UploadedFile) {
+                    $this->cleanupOldImage($gambar_url);
                     try {
-                        // Delete old image if exists
-                        if ($gambar_url) {
-                            $public_id = last(explode('/', parse_url($gambar_url)['path']));
-                            Cloudinary::destroy($public_id);
-                        }
-    
                         $result = Cloudinary::upload($this->gambar->getRealPath(), [
                             'folder' => 'sop-images',
                             'resource_type' => 'image',
-                            'public_id' => 'sop_update_' . time(),
-                            'overwrite' => true,
-                            'transformation' => [
-                                'quality' => 'auto',
-                                'fetch_format' => 'auto'
-                            ]
+                            'public_id' => 'sop_' . time() . '_' . uniqid(),
+                            'overwrite' => true
                         ]);
                         $gambar_url = $result->getSecurePath();
-                        $this->iteration++;
                     } catch (\Exception $e) {
-                        Log::error('Cloudinary upload failed: ' . $e->getMessage());
+                        Log::error('Upload failed: ' . $e->getMessage());
                         session()->flash('error', 'Failed to upload image');
                         return;
                     }
