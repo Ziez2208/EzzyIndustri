@@ -146,7 +146,8 @@
                         </button>
                     <button type="button" class="btn btn-primary px-5" 
                             wire:click="startProduction" 
-                            {{ count($checkResults) !== count($tasks) ? 'disabled' : '' }}>
+                            wire:loading.attr="disabled"
+                            wire:target="startProduction">
                         <span wire:loading.remove wire:target="startProduction">
                             <i class="bi bi-play-circle me-1"></i>
                             Mulai Produksi
@@ -192,6 +193,12 @@
             Toast.fire({
                 icon: 'success',
                 title: 'Foto berhasil diunggah'
+            });
+        });
+        Livewire.on('error', message => {
+            Toast.fire({
+                icon: 'error',
+                title: message
             });
         });
     </script>

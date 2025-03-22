@@ -109,12 +109,18 @@ class ChecksheetTable extends Component
     public function startProduction()
     {
         try {
-            Log::info('Starting checksheet validation');
+            Log::info('Starting production process', [
+                'machine_id' => $this->machineId,
+                'shift_id' => $this->shiftId,
+                'check_results' => $this->checkResults
+            ]);
             
             // Get pending production from session
             $pendingProduction = session('pending_production');
             if (!$pendingProduction) {
-                throw new \Exception('Data produksi tidak ditemukan');
+                Log::error('Pending production data not found in session');
+                session()->flash('error', 'Data produksi tidak ditemukan');
+                return;
             }
 
             DB::beginTransaction();
@@ -135,8 +141,10 @@ class ChecksheetTable extends Component
                 'ideal_cycle_time' => $pendingProduction['cycle_time']
             ]);
 
+            Log::info('Production record created', ['production_id' => $production->id]);
+
             // Create initial OEE record
-            OeeRecord::create([
+            $oeeRecord = OeeRecord::create([
                 'production_id' => $production->id,
                 'machine_id' => $pendingProduction['machine_id'],
                 'shift_id' => $pendingProduction['shift_id'],
@@ -152,43 +160,63 @@ class ChecksheetTable extends Component
                 'quality_rate' => 0,
                 'oee_score' => 0
             ]);
+
+            Log::info('OEE record created', ['oee_id' => $oeeRecord->id]);
     
             // Save checksheet entries
             foreach ($this->checkResults as $taskId => $result) {
-                $task = MaintenanceTask::find($taskId);
-                
-                // Get shift start time for next check
-                $shiftIds = json_decode($task->shift_ids);
-                $shift = Shift::find($shiftIds[0]);
-                $nextCheckTime = now()->addDay()->format('Y-m-d') . ' ' . $shift->start_time;
-                $nextCheckDue = \Carbon\Carbon::parse($nextCheckTime)->subHour();
-    
-                $checksheetEntry = ChecksheetEntry::create([
-                    'production_id' => $production->id,
-                    'task_id' => $taskId,
-                    'machine_id' => $this->machineId,
-                    'shift_id' => $this->shiftId,
-                    'user_id' => Auth::id(),
-                    'result' => $result,
-                    'notes' => $this->notes[$taskId] ?? null,
-                    'photo_path' => isset($this->photos[$taskId]) ? $this->photos[$taskId]->store('photos', 'public') : null,
-                ]);
-    
-                Log::info("Checksheet Entry Created", [
-                    'task_name' => $task->task_name,
-                    'production_id' => $production->id,
-                    'result' => $result
-                ]);
+                try {
+                    $task = MaintenanceTask::findOrFail($taskId);
+                    
+                    $checksheetData = [
+                        'production_id' => $production->id,
+                        'task_id' => $taskId,
+                        'machine_id' => $this->machineId,
+                        'shift_id' => $this->shiftId,
+                        'user_id' => Auth::id(),
+                        'result' => $result,
+                        'notes' => $this->notes[$taskId] ?? null,
+                    ];
+
+                    // Handle photo upload if exists
+                    if (isset($this->photos[$taskId])) {
+                        $checksheetData['photo_path'] = $this->photos[$taskId]->store('photos', 'public');
+                    }
+
+                    $checksheetEntry = ChecksheetEntry::create($checksheetData);
+                    
+                    Log::info("Checksheet entry created", [
+                        'entry_id' => $checksheetEntry->id,
+                        'task_id' => $taskId,
+                        'result' => $result
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error("Error creating checksheet entry", [
+                        'task_id' => $taskId,
+                        'error' => $e->getMessage()
+                    ]);
+                    throw $e;
+                }
             }
         
             DB::commit();
             
+            // Clear session data
+            session()->forget('pending_production');
+            
+            Log::info('Production started successfully', [
+                'production_id' => $production->id
+            ]);
+
             return redirect()->route('production.status');
     
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error in production start: ' . $e->getMessage());
-            session()->flash('error', 'Terjadi kesalahan saat memulai produksi');
+            Log::error('Error starting production', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            session()->flash('error', 'Terjadi kesalahan saat memulai produksi: ' . $e->getMessage());
             return null;
         }
     }
