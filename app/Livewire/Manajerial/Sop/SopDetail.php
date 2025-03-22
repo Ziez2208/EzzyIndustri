@@ -117,37 +117,54 @@ class SopDetail extends Component
             }
         }
     
+        protected $listeners = ['finishUpload'];
+    
         public function finishUpload($name, $tmpPath, $isMultiple)
-            {
+        {
+            Log::info('finishUpload dipanggil', [
+                'name' => $name,
+                'tmpPath' => $tmpPath,
+                'isMultiple' => $isMultiple
+            ]);
+    
+            try {
+                // Reset nilai jika null
                 if ($tmpPath === null) {
                     $this->$name = null;
+                    $this->iteration++;
                     return;
                 }
     
-                try {
-                    if ($isMultiple && is_array($tmpPath)) {
-                        $files = [];
-                        foreach ($tmpPath as $path) {
-                            if ($path) {
-                                $files[] = TemporaryUploadedFile::createFromLivewire($path);
-                            }
-                        }
-                        $this->$name = $files;
-                    } else {
-                        $path = is_array($tmpPath) ? array_shift($tmpPath) : $tmpPath;
-                        if ($path) {
-                            $this->$name = TemporaryUploadedFile::createFromLivewire($path);
-                        }
+                // Handle single file upload
+                if (!$isMultiple) {
+                    if (is_string($tmpPath)) {
+                        $this->$name = TemporaryUploadedFile::createFromLivewire($tmpPath);
+                    } elseif (is_array($tmpPath) && !empty($tmpPath)) {
+                        $this->$name = TemporaryUploadedFile::createFromLivewire($tmpPath[0]);
                     }
-                } catch (\Exception $e) {
-                    Log::error('Upload gagal:', [
-                        'error' => $e->getMessage(),
-                        'tmpPath' => $tmpPath
-                    ]);
-                    $this->$name = null;
-                    session()->flash('error', 'Gagal mengupload file');
+                    $this->iteration++;
+                    return;
                 }
+    
+                // Handle multiple file upload
+                if (is_array($tmpPath)) {
+                    $this->$name = collect($tmpPath)
+                        ->filter()
+                        ->map(fn($path) => TemporaryUploadedFile::createFromLivewire($path))
+                        ->toArray();
+                }
+                $this->iteration++;
+    
+            } catch (\Exception $e) {
+                Log::error('Error saat upload:', [
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                $this->$name = null;
+                $this->iteration++;
+                session()->flash('error', 'Gagal upload file: ' . $e->getMessage());
             }
+        }
     
         protected function cleanupOldImage($url)
         {
