@@ -118,29 +118,34 @@ class SopDetail extends Component
         }
     
         public function finishUpload($name, $tmpPath, $isMultiple)
-        {
-            try {
-                if (!$tmpPath) {
-                    $this->gambar = null;
-                    return;
-                }
+            {
+                try {
+                    if (empty($tmpPath)) {
+                        $this->$name = null;
+                        return;
+                    }
     
-                if ($isMultiple) {
-                    $files = collect($tmpPath)->map(function ($path) {
-                        return TemporaryUploadedFile::createFromLivewire($path);
-                    })->toArray();
-                    $this->$name = $files;
-                } else {
-                    $this->$name = TemporaryUploadedFile::createFromLivewire($tmpPath[0]);
+                    if ($isMultiple && is_array($tmpPath)) {
+                        $files = collect($tmpPath)->map(function ($path) {
+                            return $path ? TemporaryUploadedFile::createFromLivewire($path) : null;
+                        })->filter()->toArray();
+                        $this->$name = $files;
+                    } else {
+                        $path = is_array($tmpPath) ? ($tmpPath[0] ?? null) : $tmpPath;
+                        if ($path) {
+                            $this->$name = TemporaryUploadedFile::createFromLivewire($path);
+                        } else {
+                            $this->$name = null;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error('File upload completion failed:', [
+                        'error' => $e->getMessage(),
+                        'tmpPath' => $tmpPath
+                    ]);
+                    $this->$name = null;
                 }
-            } catch (\Exception $e) {
-                Log::error('File upload completion failed:', [
-                    'error' => $e->getMessage(),
-                    'tmpPath' => $tmpPath
-                ]);
-                $this->$name = null;
             }
-        }
     
         protected function cleanupOldImage($url)
         {
