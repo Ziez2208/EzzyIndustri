@@ -17,6 +17,7 @@ use App\Models\Sop;
 use Illuminate\Support\Facades\Redirect;
 use App\Models\Shift;
 use App\Models\OeeRecord;
+use Sentry\State\Scope;
 
 class ChecksheetTable extends Component
 {
@@ -109,63 +110,88 @@ class ChecksheetTable extends Component
     public function startProduction()
     {
         try {
+            \Sentry\configureScope(function (Scope $scope): void {
+                $scope->setExtra('machine_id', $this->machineId);
+                $scope->setExtra('shift_id', $this->shiftId);
+                $scope->setExtra('check_results', $this->checkResults);
+                $scope->setUser(['id' => Auth::id()]);
+            });
+
             Log::info('Starting production process', [
                 'machine_id' => $this->machineId,
                 'shift_id' => $this->shiftId,
-                'check_results' => $this->checkResults
+                'check_results' => $this->checkResults,
+                'pending_production' => session('pending_production')
             ]);
             
             // Get pending production from session
             $pendingProduction = session('pending_production');
             if (!$pendingProduction) {
-                Log::error('Pending production data not found in session');
-                session()->flash('error', 'Data produksi tidak ditemukan');
-                return;
+                throw new \Exception('Data produksi tidak ditemukan dalam session');
+            }
+
+            // Validate required data
+            if (!isset($pendingProduction['machine_id'], 
+                      $pendingProduction['product_id'], 
+                      $pendingProduction['shift_id'])) {
+                throw new \Exception('Data produksi tidak lengkap');
             }
 
             DB::beginTransaction();
 
-            // Create the production record
-            $production = Production::create([
-                'user_id' => Auth::id(),
-                'machine_id' => $pendingProduction['machine_id'],
-                'machine' => $pendingProduction['machine_name'],
-                'product_id' => $pendingProduction['product_id'],
-                'product' => $pendingProduction['product_name'],
-                'shift_id' => $pendingProduction['shift_id'],
-                'status' => 'running',
-                'start_time' => now(),
-                'planned_production_time' => $pendingProduction['planned_production_time'],
-                'cycle_time' => $pendingProduction['cycle_time'],
-                'target_per_shift' => $pendingProduction['target_per_shift'],
-                'ideal_cycle_time' => $pendingProduction['cycle_time']
-            ]);
+            try {
+                // Create production record
+                $production = Production::create([
+                    'user_id' => Auth::id(),
+                    'machine_id' => $pendingProduction['machine_id'],
+                    'machine' => $pendingProduction['machine_name'],
+                    'product_id' => $pendingProduction['product_id'],
+                    'product' => $pendingProduction['product_name'],
+                    'shift_id' => $pendingProduction['shift_id'],
+                    'status' => 'running',
+                    'start_time' => now(),
+                    'planned_production_time' => $pendingProduction['planned_production_time'],
+                    'cycle_time' => $pendingProduction['cycle_time'],
+                    'target_per_shift' => $pendingProduction['target_per_shift'],
+                    'ideal_cycle_time' => $pendingProduction['cycle_time']
+                ]);
 
-            Log::info('Production record created', ['production_id' => $production->id]);
+                \Sentry\addBreadcrumb(new \Sentry\Breadcrumb(
+                    \Sentry\Breadcrumb::LEVEL_INFO,
+                    \Sentry\Breadcrumb::TYPE_DEFAULT,
+                    'production',
+                    'Production record created',
+                    ['production_id' => $production->id]
+                ));
 
-            // Create initial OEE record
-            $oeeRecord = OeeRecord::create([
-                'production_id' => $production->id,
-                'machine_id' => $pendingProduction['machine_id'],
-                'shift_id' => $pendingProduction['shift_id'],
-                'date' => now(),
-                'planned_production_time' => $pendingProduction['planned_production_time'],
-                'operating_time' => 0,
-                'total_downtime' => 0,
-                'total_output' => 0,
-                'good_output' => 0,
-                'ideal_cycle_time' => $pendingProduction['cycle_time'],
-                'availability_rate' => 0,
-                'performance_rate' => 0,
-                'quality_rate' => 0,
-                'oee_score' => 0
-            ]);
+                // Create OEE record
+                $oeeRecord = OeeRecord::create([
+                    'production_id' => $production->id,
+                    'machine_id' => $pendingProduction['machine_id'],
+                    'shift_id' => $pendingProduction['shift_id'],
+                    'date' => now(),
+                    'planned_production_time' => $pendingProduction['planned_production_time'],
+                    'operating_time' => 0,
+                    'total_downtime' => 0,
+                    'total_output' => 0,
+                    'good_output' => 0,
+                    'ideal_cycle_time' => $pendingProduction['cycle_time'],
+                    'availability_rate' => 0,
+                    'performance_rate' => 0,
+                    'quality_rate' => 0,
+                    'oee_score' => 0
+                ]);
 
-            Log::info('OEE record created', ['oee_id' => $oeeRecord->id]);
-    
-            // Save checksheet entries
-            foreach ($this->checkResults as $taskId => $result) {
-                try {
+                \Sentry\addBreadcrumb(new \Sentry\Breadcrumb(
+                    \Sentry\Breadcrumb::LEVEL_INFO,
+                    \Sentry\Breadcrumb::TYPE_DEFAULT,
+                    'oee',
+                    'OEE record created',
+                    ['oee_id' => $oeeRecord->id]
+                ));
+
+                // Save checksheet entries
+                foreach ($this->checkResults as $taskId => $result) {
                     $task = MaintenanceTask::findOrFail($taskId);
                     
                     $checksheetData = [
@@ -178,44 +204,43 @@ class ChecksheetTable extends Component
                         'notes' => $this->notes[$taskId] ?? null,
                     ];
 
-                    // Handle photo upload if exists
                     if (isset($this->photos[$taskId])) {
                         $checksheetData['photo_path'] = $this->photos[$taskId]->store('photos', 'public');
                     }
 
                     $checksheetEntry = ChecksheetEntry::create($checksheetData);
                     
-                    Log::info("Checksheet entry created", [
-                        'entry_id' => $checksheetEntry->id,
-                        'task_id' => $taskId,
-                        'result' => $result
-                    ]);
-                } catch (\Exception $e) {
-                    Log::error("Error creating checksheet entry", [
-                        'task_id' => $taskId,
-                        'error' => $e->getMessage()
-                    ]);
-                    throw $e;
+                    \Sentry\addBreadcrumb(new \Sentry\Breadcrumb(
+                        \Sentry\Breadcrumb::LEVEL_INFO,
+                        \Sentry\Breadcrumb::TYPE_DEFAULT,
+                        'checksheet',
+                        "Checksheet entry created for task $taskId",
+                        ['entry_id' => $checksheetEntry->id]
+                    ));
                 }
-            }
-        
-            DB::commit();
-            
-            // Clear session data
-            session()->forget('pending_production');
-            
-            Log::info('Production started successfully', [
-                'production_id' => $production->id
-            ]);
 
-            return redirect()->route('production.status');
-    
+                DB::commit();
+                session()->forget('pending_production');
+
+                return redirect()->route('production.status');
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+
         } catch (\Exception $e) {
-            DB::rollBack();
+            \Sentry\captureException($e);
+            
             Log::error('Error starting production', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'session' => session()->all(),
+                'user_id' => Auth::id(),
+                'machine_id' => $this->machineId,
+                'shift_id' => $this->shiftId
             ]);
+
             session()->flash('error', 'Terjadi kesalahan saat memulai produksi: ' . $e->getMessage());
             return null;
         }

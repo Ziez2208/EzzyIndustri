@@ -196,6 +196,7 @@
             });
         });
         Livewire.on('error', message => {
+            Sentry.captureMessage('Production Start UI Error: ' + message, 'error');
             Toast.fire({
                 icon: 'error',
                 title: message
